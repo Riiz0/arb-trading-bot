@@ -7,22 +7,17 @@
 const hre = require("hardhat");
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  const arbitrage = await hre.ethers.deployContract(
+    "Arbitrage",
+    [
+      config.SUSHISWAP.V2_ROUTER_02_ADDRESS,
+      config.UNISWAP.V2_ROUTER_02_ADDRESS
+    ]
+  )
 
-  const lockedAmount = hre.ethers.parseEther("0.001");
+  await arbitrage.waitForDeployment()
 
-  const lock = await hre.ethers.deployContract("Lock", [unlockTime], {
-    value: lockedAmount,
-  });
-
-  await lock.waitForDeployment();
-
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`
-  );
+  console.log(`Arbitrage Contract Deployed to ${await arbitrage.getAddress()}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
