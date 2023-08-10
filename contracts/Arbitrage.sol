@@ -20,17 +20,22 @@ contract Arbitrage is IFlashLoanRecipient{
     }
 
     function executeTrade(
-        bool _startOnUniswap
-        address _token0
-        address _token1
+        bool _startOnUniswap,
+        address _token0,
+        address _token1,
         uint256 _flashAmount
     ) external {
         bytes memory data = abi.encode(_startOnUniswap, _token0, _token1);
-        //Code for executing Trades
 
         // Token to flash loan, by default we are flash loaning 1 token
+        IERC20[] memory tokens = new IERC20[](1);
+        tokens[0] = _flashAmount;
 
         // Flash loan amount.
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = _flashAmount;
+
+        vault.flashLoan(this, tokens, amounts, data);
     }
 
     function receiveFlashLoan(
@@ -40,23 +45,61 @@ contract Arbitrage is IFlashLoanRecipient{
         bytes memory userData
     ) external override {
         require(msg.sender == address(vault));
+
         uint256 flashAmount = amounts[0];
+
         (bool startOnUniswap, address, token0, address token1) = abi.decode(
             userData, 
                 (bool, address, address)
         );
-        // Use the money here!
         address[] memory path = new address[](2);
 
-        //Code for receiving flashloan
+        path[0] = token0;
+        path[1] = token1;
+
+        if(startOnUniswap) {
+            _swapOnUniswap(path, flashAmount, 0);
+
+            path[0] = token1;
+            path[1] = token0;
+
+            _swapOnSushiswap(
+                path,
+                IERC20(token1).balanceOf(address(this)),
+                flashAmount
+            );
+        } else {
+            _swapOnSushiswap(path, flashAmount, 0);
+
+            path[0] = token1;
+            path[1] = token0;
+
+            _swapOnUniswap(path, 
+            IERC20(token1).balanceOf(address(this)), 
+            flashAmount
+            );
+
+            _swapOnUniswap(
+                path,
+                IERC20(token1).balanceOf(address(this)),
+                flashAmount
+            );
+        }
+
+        IERC20(token0).transfer(address(vault), flashAmount);
+
+        IERC20(token0).transfer(owner, IERC20(token0).balanceOf(address(this)));
+
     }
 
 // -- INTERNAL FUNCTIONS -- //
     function _swapOnUniswap() internal require {
         //Code for swapping on uniswap
+
     }
 
     function _swapOnSushiswap() internal require {
         //Code for swapping on sushiswap
+        
     }   
 }
