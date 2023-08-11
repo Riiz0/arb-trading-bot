@@ -1,21 +1,21 @@
-//SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.18;
 
-import "@balancer-labs/v2-interfaces/contracts/vault/IValut.sol";
+import "@balancer-labs/v2-interfaces/contracts/vault/IVault.sol";
 import "@balancer-labs/v2-interfaces/contracts/vault/IFlashLoanRecipient.sol";
 import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 
-contract Arbitrage is IFlashLoanRecipient{
+contract Arbitrage is IFlashLoanRecipient {
     IVault private constant vault =
-    IVault("0xBA12222222228d8Ba445958a75a0704d566BF2C8");
+        IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     IUniswapV2Router02 public immutable sRouter;
     IUniswapV2Router02 public immutable uRouter;
     address public owner;
 
     constructor(address _sRouter, address _uRouter) {
-        sRouter = IUniswapV2Router(_sRouter); //Sushiswap
-        uRouter = IUniswapV2Router(_uRouter); //Uniswap
+        sRouter = IUniswapV2Router02(_sRouter); // Sushiswap
+        uRouter = IUniswapV2Router02(_uRouter); // Uniswap
         owner = msg.sender;
     }
 
@@ -27,9 +27,9 @@ contract Arbitrage is IFlashLoanRecipient{
     ) external {
         bytes memory data = abi.encode(_startOnUniswap, _token0, _token1);
 
-        // Token to flash loan, by default we are flash loaning 1 token
+        // Token to flash loan, by default we are flash loaning 1 token.
         IERC20[] memory tokens = new IERC20[](1);
-        tokens[0] = _flashAmount;
+        tokens[0] = IERC20(_token0);
 
         // Flash loan amount.
         uint256[] memory amounts = new uint256[](1);
@@ -48,16 +48,18 @@ contract Arbitrage is IFlashLoanRecipient{
 
         uint256 flashAmount = amounts[0];
 
-        (bool startOnUniswap, address, token0, address token1) = abi.decode(
-            userData, 
-                (bool, address, address)
+        (bool startOnUniswap, address token0, address token1) = abi.decode(
+            userData,
+            (bool, address, address)
         );
+
+        // Use the money here!
         address[] memory path = new address[](2);
 
         path[0] = token0;
         path[1] = token1;
 
-        if(startOnUniswap) {
+        if (startOnUniswap) {
             _swapOnUniswap(path, flashAmount, 0);
 
             path[0] = token1;
@@ -74,11 +76,6 @@ contract Arbitrage is IFlashLoanRecipient{
             path[0] = token1;
             path[1] = token0;
 
-            _swapOnUniswap(path, 
-            IERC20(token1).balanceOf(address(this)), 
-            flashAmount
-            );
-
             _swapOnUniswap(
                 path,
                 IERC20(token1).balanceOf(address(this)),
@@ -89,17 +86,45 @@ contract Arbitrage is IFlashLoanRecipient{
         IERC20(token0).transfer(address(vault), flashAmount);
 
         IERC20(token0).transfer(owner, IERC20(token0).balanceOf(address(this)));
-
     }
 
-// -- INTERNAL FUNCTIONS -- //
-    function _swapOnUniswap() internal require {
-        //Code for swapping on uniswap
+    // -- INTERNAL FUNCTIONS -- //
 
+    function _swapOnUniswap(
+        address[] memory _path,
+        uint256 _amountIn,
+        uint256 _amountOut
+    ) internal {
+        require(
+            IERC20(_path[0]).approve(address(uRouter), _amountIn),
+            "Uniswap approval failed."
+        );
+
+        uRouter.swapExactTokensForTokens(
+            _amountIn,
+            _amountOut,
+            _path,
+            address(this),
+            (block.timestamp + 1200)
+        );
     }
 
-    function _swapOnSushiswap() internal require {
-        //Code for swapping on sushiswap
-        
-    }   
+    function _swapOnSushiswap(
+        address[] memory _path,
+        uint256 _amountIn,
+        uint256 _amountOut
+    ) internal {
+        require(
+            IERC20(_path[0]).approve(address(sRouter), _amountIn),
+            "Sushiswap approval failed."
+        );
+
+        sRouter.swapExactTokensForTokens(
+            _amountIn,
+            _amountOut,
+            _path,
+            address(this),
+            (block.timestamp + 1200)
+        );
+    }
 }

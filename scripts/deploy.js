@@ -4,7 +4,9 @@
 // You can also run a script with `npx hardhat run <script>`. If you do that, Hardhat
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
-const hre = require("hardhat");
+const hre = require("hardhat")
+
+const config = require("../config.json")
 
 async function main() {
   const arbitrage = await hre.ethers.deployContract(
@@ -17,7 +19,7 @@ async function main() {
 
   await arbitrage.waitForDeployment()
 
-  console.log(`Arbitrage Contract Deployed to ${await arbitrage.getAddress()}`)
+  console.log(`Arbitrage contract deployed to ${await arbitrage.getAddress()}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
