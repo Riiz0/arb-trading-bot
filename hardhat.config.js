@@ -1,7 +1,7 @@
-require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config()
+require("@nomicfoundation/hardhat-toolbox")
 
-const privateKey = process.env.PRVIATE_KEY || ""
+const privateKey = process.env.PRIVATE_KEY || ""
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -10,7 +10,8 @@ module.exports = {
     hardhat: {
       forking: {
         url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-      }
+        accounts: [privateKey],
+      },
     }
   }
 };
